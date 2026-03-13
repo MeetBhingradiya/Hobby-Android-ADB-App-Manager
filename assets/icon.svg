@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background: rounded square with indigo gradient -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Phone body -->
+  <rect x="148" y="72" width="216" height="368" rx="32" fill="none" stroke="white" stroke-width="20"/>
+
+  <!-- Phone screen area -->
+  <rect x="172" y="110" width="168" height="256" rx="10" fill="url(#screen)"/>
+
+  <!-- Top notch/camera -->
+  <circle cx="256" cy="91" r="7" fill="white" opacity="0.5"/>
+
+  <!-- Download arrow in screen -->
+  <line x1="256" y1="160" x2="256" y2="260" stroke="white" stroke-width="22" stroke-linecap="round"/>
+  <polyline points="214,222 256,266 298,222" fill="none" stroke="white" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- APK label badge -->
+  <rect x="188" y="290" width="136" height="44" rx="10" fill="white" opacity="0.95"/>
+  <text x="256" y="319" text-anchor="middle" font-family="-apple-system, system-ui, sans-serif" font-weight="800" font-size="22" fill="#4338ca" letter-spacing="1">APK</text>
+
+  <!-- Home button -->
+  <rect x="228" y="400" width="56" height="20" rx="10" fill="white" opacity="0.35"/>
+</svg>

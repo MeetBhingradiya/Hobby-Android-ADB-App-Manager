@@ -1,0 +1,39 @@
+{
+  "name": "apk-manager",
+  "version": "1.0.0",
+  "description": "ADB-based Android APK installer, extractor & device manager",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "concurrently -k -r \"next dev -p 3000\" \"bunx wait-on http://localhost:3000 && bun run build:electron && electron .\"",
+    "build:renderer": "next build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "icons": "node scripts/gen-icons.mjs",
+    "build": "bun run build:renderer && bun run build:electron && electron-builder",
+    "preview": "bun run build:renderer && bun run build:electron && electron ."
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^22.0.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.0",
+    "concurrently": "^9.0.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "lucide-react": "^0.460.0",
+    "next": "^15.0.0",
+    "png2icons": "^2.0.1",
+    "postcss": "^8.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.0.0",
+    "wait-on": "^8.0.0"
+  }
+}
