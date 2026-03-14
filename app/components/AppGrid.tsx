@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { Device, PackageInfo, DeviceUser } from '@/types/electron'
-import { RefreshCw, Search, Package, Users } from 'lucide-react'
+import { RefreshCw, Search, Package, Users, Lock } from 'lucide-react'
 import { AppCard } from './AppCard'
 
 interface Props {
@@ -13,6 +13,7 @@ export function AppGrid({ device }: Props) {
   const [packages, setPackages] = useState<PackageInfo[]>([])
   const [filtered, setFiltered] = useState<PackageInfo[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [includeSystem, setIncludeSystem] = useState(false)
   const [query, setQuery] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
@@ -29,10 +30,19 @@ export function AppGrid({ device }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       const list = await window.adb.listPackages(device.serial, includeSystem, selectedUserId)
       setPackages(list)
-    } catch { /* device disconnected */ }
+    } catch (err) {
+      setPackages([])
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('SecurityException') || msg.includes('permission')) {
+        setLoadError('Cannot access this user profile — ADB shell lacks permission (root required for Knox/Secure Folder)')
+      } else {
+        setLoadError('Failed to load packages')
+      }
+    }
     setLoading(false)
   }, [device.serial, includeSystem, selectedUserId])
 
@@ -118,6 +128,11 @@ export function AppGrid({ device }: Props) {
         <div className="flex flex-1 items-center justify-center gap-2 text-muted">
           <RefreshCw size={16} className="animate-spin" />
           <span className="text-sm">Loading packages…</span>
+        </div>
+      ) : loadError ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center text-muted">
+          <Lock size={32} className="opacity-40" />
+          <span className="text-sm text-danger">{loadError}</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted">

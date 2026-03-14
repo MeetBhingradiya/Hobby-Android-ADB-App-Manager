@@ -141,7 +141,7 @@ export function QRConnectDialog({ onClose, onConnected }: Props) {
 
         {/* Tabs */}
         <div className="flex border-b border-border">
-          {([['pair', 'Pair Device'], ['pcinfo', 'PC Info & QR']] as const).map(([id, label]) => (
+          {([['pair', 'Pair (Android 11+)'], ['pcinfo', 'Connect via QR']] as const).map(([id, label]) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -264,10 +264,12 @@ export function QRConnectDialog({ onClose, onConnected }: Props) {
         {tab === 'pcinfo' && (
           <div className="p-5">
             <p className="mb-3 text-xs text-muted">
-              Scan with an <span className="text-zinc-300">ADB WiFi Manager</span> app on your phone to auto-connect
-              (<code className="rounded bg-zinc-700 px-1 py-0.5 font-mono">ip:port</code> format).
-              Or copy the command below and run it on your PC.
+              Scan with a third-party ADB client app on your phone (e.g. <span className="text-zinc-300">WiFiADB</span>,
+              <span className="text-zinc-300"> Remote ADB Shell</span>). QR encodes <code className="rounded bg-zinc-700 px-1 py-0.5 font-mono">ip:5555</code>.
             </p>
+            <div className="mb-3 rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-300">
+              Android 11+&rsquo;s built-in &ldquo;Pair with QR code&rdquo; scanner will reject this — use the <span className="font-medium">Pair (Android 11+)</span> tab instead.
+            </div>
 
             {/* Interface selector */}
             {localIPs.length > 1 && (
@@ -344,7 +346,7 @@ export function QRConnectDialog({ onClose, onConnected }: Props) {
             )}
 
             <p className="mt-4 text-[11px] text-muted">
-              Tip: Run <code className="rounded bg-zinc-700 px-1 py-0.5 font-mono">adb tcpip 5555</code> on the device first (requires USB connection once).
+              Pre-requisite: TCP/IP mode must be active on the device. Run <code className="rounded bg-zinc-700 px-1 py-0.5 font-mono">adb tcpip 5555</code> once via USB, or enable it in Developer Options.
             </p>
           </div>
         )}

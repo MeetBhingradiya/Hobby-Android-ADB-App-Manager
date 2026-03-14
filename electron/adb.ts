@@ -316,14 +316,19 @@ export async function listPackages(serial: string, includeSystem: boolean, userI
 
 export async function getAppIcon(serial: string, pkg: string, apkPath: string): Promise<string | null> {
     try {
-        // Search both mipmap and drawable folders for PNG or WebP icons.
-        // Exclude adaptive/monochrome/vector variants, sort by file size desc to get highest resolution.
+        // Two-pass strategy, mipmap dirs only (drawable dirs contain splash screens, banners, etc.):
+        // Pass 1 — files named ic_launcher* in any mipmap-* subdirectory (most apps)
+        // Pass 2 — any PNG/WebP in any mipmap-* subdir, largest first (fallback for unusual naming)
         const cmd = [
             'sh', '-c',
             `apk="${apkPath}"; ` +
             `icon=$(unzip -l "$apk" 2>/dev/null | ` +
-            `grep -E 'res/(mipmap|drawable)-.+\\.(png|webp)' | ` +
-            `grep -Ev 'adaptive|foreground|background|monochrome|night|notif|banner' | ` +
+            `grep -E 'res/mipmap-[^/]+/[^/]*ic_launcher[^/]*\\.(png|webp)$' | ` +
+            `grep -Ev 'foreground|background|monochrome|adaptive' | ` +
+            `sort -k4 -rn | head -1 | awk '{print $NF}'); ` +
+            `[ -z "$icon" ] && icon=$(unzip -l "$apk" 2>/dev/null | ` +
+            `grep -E 'res/mipmap-[^/]+/[^/]+\\.(png|webp)$' | ` +
+            `grep -Ev 'foreground|background|monochrome|adaptive' | ` +
             `sort -k4 -rn | head -1 | awk '{print $NF}'); ` +
             `[ -n "$icon" ] && unzip -p "$apk" "$icon" 2>/dev/null || true`
         ]
@@ -365,6 +370,36 @@ export async function getAppLabel(serial: string, pkg: string): Promise<string> 
 
 // ---------- APK install ----------
 
+// Session-based install via device pm: sets installer to com.android.vending so
+// Android treats the app as "from Play Store" and skips the sideload warning/block.
+async function installViaSession(serial: string, apkFiles: string[]): Promise<string> {
+    const createOut = await adb(serial, [
+        'shell', 'pm', 'install-create', '-r', '-t', '-g',
+        '--installer-package', 'com.android.vending',
+    ], 15000)
+
+    const m = createOut.match(/\[(\d+)\]/)
+    if (!m) throw new Error(`Failed to create install session: ${createOut.trim()}`)
+    const sid = m[1]
+
+    try {
+        for (let i = 0; i < apkFiles.length; i++) {
+            const local = apkFiles[i]
+            const devTmp = `/data/local/tmp/__apkm_${sid}_${i}.apk`
+            await adb(serial, ['push', local, devTmp], 120000)
+            try {
+                await adb(serial, ['shell', 'pm', 'install-write', sid, `split_${i}`, devTmp], 60000)
+            } finally {
+                await adb(serial, ['shell', 'rm', '-f', devTmp], 5000).catch(() => {})
+            }
+        }
+        return await adb(serial, ['shell', 'pm', 'install-commit', sid], 60000)
+    } catch (err) {
+        await adb(serial, ['shell', 'pm', 'install-abandon', sid], 5000).catch(() => {})
+        throw err
+    }
+}
+
 export async function installApk(
     serial: string,
     paths: string[],
@@ -376,18 +411,42 @@ export async function installApk(
         onProgress?.({ path: apkPath, status: 'installing' })
 
         const ext = path.extname(apkPath).toLowerCase()
-        const isBundle = ext === '.apks'
 
         try {
-            let output: string
-            if (isBundle) {
-                output = await adb(serial, ['install-multiple', '-r', apkPath], 120000)
+            let apkFiles: string[]
+            let tmpDir: string | null = null
+
+            if (ext === '.apks') {
+                // Extract split-APK bundle into a temp dir
+                tmpDir = path.join(os.tmpdir(), `apks-install-${Date.now()}`)
+                fs.mkdirSync(tmpDir, { recursive: true })
+                const zip = new AdmZip(apkPath)
+                zip.extractAllTo(tmpDir, true)
+                apkFiles = fs.readdirSync(tmpDir)
+                    .filter(f => f.toLowerCase().endsWith('.apk'))
+                    .map(f => path.join(tmpDir!, f))
+                if (apkFiles.length === 0) throw new Error('No APK files found inside the bundle')
             } else {
-                output = await adb(serial, ['install', '-r', apkPath], 120000)
+                apkFiles = [apkPath]
             }
 
-            const success = output.includes('Success')
-            const pkgMatch = output.match(/pkg: ([\w.]+)/) || output.match(/Installed (.+)\.\.\./i)
+            let output: string
+            try {
+                // Primary: session-based install with Play Store as installer
+                output = await installViaSession(serial, apkFiles)
+            } catch {
+                // Fallback: legacy adb install / install-multiple
+                if (apkFiles.length > 1) {
+                    output = await adb(serial, ['install-multiple', '-r', '-t', ...apkFiles], 120000)
+                } else {
+                    output = await adb(serial, ['install', '-r', '-t', apkFiles[0]], 120000)
+                }
+            } finally {
+                if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true })
+            }
+
+            const success = output.toLowerCase().includes('success')
+            const pkgMatch = output.match(/pkg: ([\w.]+)/) || output.match(/package: ([\w.]+)/i)
 
             results.push({
                 path: apkPath,
