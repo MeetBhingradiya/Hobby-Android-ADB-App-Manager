@@ -38,6 +38,27 @@ export interface DeviceUser {
   name: string
 }
 
+export interface LocalApkInfo {
+  filePath: string
+  fileName: string
+  packageName: string
+}
+
+export interface LocalApkMeta {
+  packageName: string
+  label: string
+  iconDataUrl: string | null
+  /** True when manifest declares android.uid.system — cannot be sideloaded on standard devices */
+  isSystem: boolean
+}
+
+export interface GetMetaResult {
+  meta: LocalApkMeta | null
+  needsJava: boolean
+  needsApktool: boolean
+  error?: string
+}
+
 export interface AdbBridge {
   // ADB binary management
   checkAdb(): Promise<AdbCheckResult>
@@ -72,6 +93,16 @@ export interface AdbBridge {
   // Progress events (call once, callback invoked on progress)
   onDownloadProgress(cb: (pct: number) => void): () => void
   onInstallProgress(cb: (info: { path: string; status: string }) => void): () => void
+
+  // Local APK panel
+  listLocalApks(): Promise<LocalApkInfo[]>
+  getLocalApkMeta(filePath: string): Promise<GetMetaResult>
+  getDeviceApkMeta(serial: string, packageName: string, apkPath: string): Promise<GetMetaResult>
+  prefetchDeviceMetas(serial: string, packages: Array<{ packageName: string; apkPath: string }>): Promise<void>
+  checkApktool(): Promise<{ javaFound: boolean; apktoolFound: boolean }>
+  downloadApktool(): Promise<{ success: boolean; path: string; error?: string }>
+  openLocalApkDir(): Promise<void>
+  onApktoolProgress(cb: (pct: number) => void): () => void
 }
 
 declare global {

@@ -5,7 +5,7 @@ import type { Device } from '@/types/electron'
 import { AdbSetupDialog } from './components/AdbSetupDialog'
 import { DeviceBar } from './components/DeviceBar'
 import { AppGrid } from './components/AppGrid'
-import { InstallZone } from './components/InstallZone'
+import { InstallPanel } from './components/InstallPanel'
 import { Smartphone } from 'lucide-react'
 
 export default function Home() {
@@ -33,31 +33,20 @@ export default function Home() {
   }
 
   if (!adbReady) {
-    return (
-      <AdbSetupDialog
-        onReady={() => setAdbReady(true)}
-      />
-    )
+    return <AdbSetupDialog onReady={() => setAdbReady(true)} />
   }
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Left sidebar — device list */}
-      <DeviceBar
-        selectedDevice={selectedDevice}
-        onSelectDevice={setSelectedDevice}
-      />
+      <DeviceBar selectedDevice={selectedDevice} onSelectDevice={setSelectedDevice} />
 
-      {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {selectedDevice ? (
           <>
-            {/* App list */}
             <div className="flex-1 overflow-hidden">
               <AppGrid device={selectedDevice} />
             </div>
-            {/* Install zone at bottom */}
-            <InstallZone device={selectedDevice} />
+            <InstallPanel device={selectedDevice} />
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 text-muted">

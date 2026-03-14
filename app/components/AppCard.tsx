@@ -7,10 +7,11 @@ import { Download, Trash2, Loader2, Package } from 'lucide-react'
 interface Props {
   device: Device
   pkg: PackageInfo
+  useApktool: boolean
   onUninstalled: () => void
 }
 
-export function AppCard({ device, pkg, onUninstalled }: Props) {
+export function AppCard({ device, pkg, useApktool, onUninstalled }: Props) {
   const [icon, setIcon] = useState<string | null>(null)
   const [label, setLabel] = useState<string>(pkg.packageName)
   const [iconLoading, setIconLoading] = useState(true)
@@ -25,7 +26,18 @@ export function AppCard({ device, pkg, onUninstalled }: Props) {
     if (observed.current) return
     observed.current = true
 
-    // Load label and icon concurrently
+    // Primary: apktool — pull APK from device, decode, get accurate icon + label
+    if (useApktool) {
+      const result = await window.adb.getDeviceApkMeta(device.serial, pkg.packageName, pkg.apkPath)
+      if (result.meta) {
+        setIcon(result.meta.iconDataUrl)
+        setLabel(result.meta.label)
+        setIconLoading(false)
+        return
+      }
+    }
+
+    // Fallback: adb exec-out unzip (fast, works for non-obfuscated APKs)
     const [iconResult, labelResult] = await Promise.all([
       window.adb.getAppIcon(device.serial, pkg.packageName, pkg.apkPath),
       window.adb.getAppLabel(device.serial, pkg.packageName),
@@ -33,7 +45,7 @@ export function AppCard({ device, pkg, onUninstalled }: Props) {
     setIcon(iconResult)
     setLabel(labelResult)
     setIconLoading(false)
-  }, [device.serial, pkg.packageName, pkg.apkPath])
+  }, [device.serial, pkg.packageName, pkg.apkPath, useApktool])
 
   useEffect(() => {
     const el = cardRef.current

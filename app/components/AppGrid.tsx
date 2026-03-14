@@ -19,8 +19,14 @@ export function AppGrid({ device }: Props) {
   const [refreshKey, setRefreshKey] = useState(0)
   const [users, setUsers] = useState<DeviceUser[]>([])
   const [selectedUserId, setSelectedUserId] = useState(0)
+  const [useApktool, setUseApktool] = useState(false)
 
-  // Fetch users once per device
+  // Check apktool readiness once on mount — drives icon/label strategy in AppCard
+  useEffect(() => {
+    window.adb.checkApktool().then(({ javaFound, apktoolFound }) => {
+      setUseApktool(javaFound && apktoolFound)
+    })
+  }, [])
   useEffect(() => {
     setSelectedUserId(0)
     window.adb.listUsers(device.serial).then(list => {
@@ -47,6 +53,15 @@ export function AppGrid({ device }: Props) {
   }, [device.serial, includeSystem, selectedUserId])
 
   useEffect(() => { load() }, [load, refreshKey])
+
+  // Background-prefetch all APK metadata as soon as the list is ready
+  useEffect(() => {
+    if (!useApktool || packages.length === 0) return
+    window.adb.prefetchDeviceMetas(
+      device.serial,
+      packages.map(p => ({ packageName: p.packageName, apkPath: p.apkPath })),
+    )
+  }, [useApktool, packages, device.serial])
 
   // Filter whenever query or packages change
   useEffect(() => {
@@ -146,6 +161,7 @@ export function AppGrid({ device }: Props) {
               key={pkg.packageName}
               device={device}
               pkg={pkg}
+              useApktool={useApktool}
               onUninstalled={() => setRefreshKey(k => k + 1)}
             />
           ))}

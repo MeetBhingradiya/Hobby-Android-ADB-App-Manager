@@ -50,4 +50,20 @@ contextBridge.exposeInMainWorld('adb', {
     ipcRenderer.on('adb:install-progress', handler)
     return () => ipcRenderer.removeListener('adb:install-progress', handler)
   },
+
+  // Local APK panel
+  listLocalApks: () => ipcRenderer.invoke('apk:list-local'),
+  getLocalApkMeta: (filePath: string) => ipcRenderer.invoke('apk:get-local-meta', filePath),
+  getDeviceApkMeta: (serial: string, packageName: string, apkPath: string) =>
+    ipcRenderer.invoke('apk:get-device-meta', serial, packageName, apkPath),
+  prefetchDeviceMetas: (serial: string, packages: Array<{ packageName: string; apkPath: string }>) =>
+    ipcRenderer.invoke('apk:prefetch-device-metas', serial, packages),
+  checkApktool: () => ipcRenderer.invoke('apk:check-apktool'),
+  downloadApktool: () => ipcRenderer.invoke('apk:download-apktool'),
+  openLocalApkDir: () => ipcRenderer.invoke('apk:open-local-dir'),
+  onApktoolProgress: (cb: (pct: number) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, pct: number) => cb(pct)
+    ipcRenderer.on('apktool:download-progress', handler)
+    return () => ipcRenderer.removeListener('apktool:download-progress', handler)
+  },
 })
